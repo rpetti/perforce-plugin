@@ -362,16 +362,32 @@ public class PerforceSCM extends SCM {
                 depot.getWorkspaces().saveWorkspace(p4workspace);
             }
 
-            //Get the list of changes since the last time we looked...
-            String p4WorkspacePath = "//" + p4workspace.getName() + "/...";
-            final int lastChange = getLastChange((Run)build.getPreviousBuild());
-            log.println("Last sync'd change: " + lastChange);
-
             List<Changelist> changes;
             int newestChange = lastChange;
+            String p4WorkspacePath = "//" + p4workspace.getName() + "/...";
+            int lastChange = 0;
+            
             if (p4Label != null) {
-                changes = new ArrayList<Changelist>(0);
+                //Get the list of changes since the last build.
+                //We are building with a label, so this may not be 100% accurate.
+                lastChange = getLastChange((Run)build.getPreviousBuild());
+                log.println("Last sync'd change (approx.): " + lastChange);
+                List<Integer> changeNumbers = depot.getChanges().getChangeNumbers(
+                        p4WorkspacePath + "@"+lastChange+",@"+p4Label, -1, -1);
+                if(!changeNumbers.isEmpty()){
+                    newestChange = changeNumbers.get(0);
+                }
+                if(lastChange < newestChange) {
+                    changes = depot.getChanges().getChangelistsFromNumbers(changeNumbers);
+                } else {
+                    changes = new ArrayList<Changelist>(0);
+                }
+                
             } else {
+                 //Get the list of changes since the last time we looked...
+                lastChange = getLastChange((Run)build.getPreviousBuild());
+                log.println("Last sync'd change: " + lastChange);
+
                 String counterName;
                 if (p4Counter != null && !updateCounterValue)
                     counterName = p4Counter;
@@ -445,7 +461,7 @@ public class PerforceSCM extends SCM {
                 // Add tagging action that indicates that the build is already
                 // tagged (you can't label a label).
                 build.addAction(new PerforceTagAction(
-                        build, depot, p4Label, projectPath));
+                        build, depot, p4Label, newestChange, projectPath));
             }
             else {
                 // Add tagging action that enables the user to create a label
@@ -631,10 +647,21 @@ public class PerforceSCM extends SCM {
                 return Boolean.TRUE;
             }
 
-            // No change in job definition (w.r.t. p4Label).  Don't currently
-            // save enough info about the label to determine if it changed.
-            logger.println("Assuming that the workspace and label definitions have not changed.");
-            return Boolean.FALSE;
+
+            String root = "//" + p4workspace.getName() + "/...";
+            List<Integer> changes = depot.getChanges().getChangeNumbers(
+                    root + "@" + lastChangeNumber + ",@" + p4Label, -1, 2);
+            if(changes.isEmpty()){
+                //This shouldn't happen
+                return null;
+            } else {
+                int newestChange = changes.get(0);
+                if(newestChange > lastChangeNumber){
+                    return Boolean.TRUE;
+                } else {
+                    return Boolean.FALSE;
+                }
+            }
         }
 
         if (lastChangeNumber > 0) {

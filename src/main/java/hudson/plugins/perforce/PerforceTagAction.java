@@ -46,6 +46,14 @@ public class PerforceTagAction extends AbstractScmTagAction {
         this.view = views;
     }
 
+    public PerforceTagAction(AbstractBuild build, Depot depot, String label, int changeNumber, String views) {
+        super(build);
+        this.depot = depot;
+        this.changeNumber = changeNumber;
+        this.tag = label;
+        this.view = views;
+    }
+
     public int getChangeNumber() {
         return changeNumber;
     }
