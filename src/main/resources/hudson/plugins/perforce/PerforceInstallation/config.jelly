@@ -1,0 +1,17 @@
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+  <f:entry title="${%Name}" field="name">
+    <f:textbox/>
+  </f:entry>
+  <f:entry title="${%Installation directory}" field="home">
+    <f:textbox/>
+  </f:entry>
+  <f:entry title="${%Executable}" field="p4Exe">
+    <f:textbox default="INSTALLATION/p4"/>
+  </f:entry>
+  <f:entry title="${%Windows system root}" field="p4SysRoot">
+    <f:textbox default="C:\\Windows"/>
+  </f:entry>
+  <f:entry title="${%Windows system drive}" field="p4SysDrive">
+    <f:textbox default="C:"/>
+  </f:entry>
+</j:jelly>
