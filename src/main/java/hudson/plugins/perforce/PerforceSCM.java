@@ -36,20 +36,13 @@ import hudson.util.FormValidation;
 import hudson.util.LogTaskListener;
 
 import hudson.util.StreamTaskListener;
+import java.io.*;
 import net.sf.json.JSONObject;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
 import javax.servlet.ServletException;
-import java.io.File;
-import java.io.FileFilter;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.PrintStream;
-import java.io.PrintWriter;
-import java.io.Serializable;
-import java.io.StringWriter;
 import java.net.InetAddress;
 import java.util.*;
 import java.util.logging.Level;
@@ -563,12 +556,32 @@ public class PerforceSCM extends SCM {
 
     private Hashtable<String, String> getDefaultSubstitutions(AbstractProject project) {
         Hashtable<String, String> subst = new Hashtable<String, String>();
-        subst.put("JOB_NAME", getSafeJobName(project));    
+
+        //Attempt to get more variables based on the last build
+        AbstractBuild b = (AbstractBuild) project.getLastBuild();
+        EnvVars env = new EnvVars(System.getenv());
+        if (b != null) {
+            Node lastBuiltOn = b.getBuiltOn();
+
+            if (lastBuiltOn != null) {
+                try {
+                    env = lastBuiltOn.toComputer().getEnvironment().overrideAll(b.getCharacteristicEnvVars());
+                } catch (IOException ex) {
+                    LOGGER.log(Level.SEVERE, null, ex);
+                } catch (InterruptedException ex) {
+                    LOGGER.log(Level.SEVERE, null, ex);
+                }
+            }
+        }
+        subst.putAll(env);
+
+        subst.put("JOB_NAME", getSafeJobName(project));
         for (NodeProperty nodeProperty: Hudson.getInstance().getGlobalNodeProperties()) {
             if (nodeProperty instanceof EnvironmentVariablesNodeProperty) {
                 subst.putAll(((EnvironmentVariablesNodeProperty)nodeProperty).getEnvVars());
             }
         }
+
         ParametersDefinitionProperty pdp = (ParametersDefinitionProperty) project.getProperty(hudson.model.ParametersDefinitionProperty.class);
         if (pdp != null) {
             for (ParameterDefinition pd : pdp.getParameterDefinitions()) {
@@ -1135,8 +1148,7 @@ public class PerforceSCM extends SCM {
             listener.getLogger().println("No previous builds to use for comparison.");
             return PollingResult.BUILD_NOW;
         }
-
-        Hashtable<String, String> subst = getDefaultSubstitutions(project);
+        
         try {
             Node buildNode = getPollingNode(project);
             Depot depot;
