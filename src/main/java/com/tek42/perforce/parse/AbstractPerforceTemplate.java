@@ -304,14 +304,15 @@ public abstract class AbstractPerforceTemplate {
 
 		List<String> lines = null;
 		int totalLength = 0;
-
+                
+                // get entire cmd to execute
+		cmd = getExtraParams(cmd);
+                
 		do {
 			int mesgIndex = -1, count = 0;
 			Executor p4 = depot.getExecFactory().newExecutor();
 			String debugCmd = "";
-			// get entire cmd to execute
-			cmd = getExtraParams(cmd);
-
+			
 			// setup information for logging...
 			for(String cm : cmd) {
 				debugCmd += cm + " ";
@@ -593,7 +594,7 @@ public abstract class AbstractPerforceTemplate {
      */
     private String p4Login(String p4Exe) throws IOException, PerforceException {
         Executor login = depot.getExecFactory().newExecutor();
-        login.exec(new String[] { p4Exe, "login", "-p" });
+        login.exec(new String[] { p4Exe, "login", "-a", "-p" });
 
         try {
             // "echo" the password for the p4 process to read
